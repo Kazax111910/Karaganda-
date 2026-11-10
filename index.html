@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KARAGANDA LAND — карта земельных участков</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<style>
+:root{--bg:#0b1220;--panel:#111b2d;--panel2:#17243a;--line:#263650;--text:#edf3fb;--muted:#94a5bd;--accent:#e5ad42}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,Arial,sans-serif}
+.app{height:100vh;display:grid;grid-template-columns:350px 1fr;overflow:hidden}
+.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;z-index:500}
+.brand{padding:20px 20px 15px;border-bottom:1px solid var(--line)}.brand small{color:var(--accent);letter-spacing:3px;font-weight:800;font-size:10px}.brand h1{font-size:21px;margin:5px 0 2px;letter-spacing:1px}.brand p{margin:0;color:var(--muted);font-size:12px}
+.content{padding:16px;overflow:auto}.section{margin-bottom:18px}.label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:8px}
+input,select,button{font:inherit}input,select{width:100%;background:#0b1424;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px 12px;outline:none}input:focus,select:focus{border-color:var(--accent)}
+.search{position:relative}.search input{padding-left:36px}.search:before{content:"⌕";position:absolute;left:13px;top:7px;font-size:23px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px}.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--muted)}
+.filters{display:grid;gap:7px}.filter{display:flex;align-items:center;gap:9px;color:#d7e0ed;font-size:13px}.dot{width:11px;height:11px;border-radius:3px;display:inline-block;flex:none}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:10px;border-radius:9px;cursor:pointer;font-weight:650}.btn:hover{border-color:var(--accent)}.btn.primary{background:var(--accent);color:#161616;border-color:var(--accent)}.btn.full{grid-column:1/-1}
+.note{font-size:11px;color:var(--muted);line-height:1.5;background:#0c1728;border:1px solid var(--line);border-radius:9px;padding:10px}
+#map{height:100%;width:100%;background:#dbe4ec}.mapwrap{position:relative;min-width:0}.maptop{position:absolute;z-index:450;top:14px;left:60px;right:14px;display:flex;justify-content:space-between;pointer-events:none;gap:10px}.mapchip{pointer-events:auto;background:#101a2beF;border:1px solid #34435b;color:#eaf1fb;padding:9px 12px;border-radius:9px;box-shadow:0 5px 18px #0003;font-size:12px}.mapchip strong{color:var(--accent)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#111b2d;color:#edf3fb}.leaflet-popup-content{margin:13px;min-width:190px}.popup-title{font-weight:800;font-size:14px;margin-bottom:6px}.popup-row{font-size:12px;color:#b7c4d7;margin:3px 0}.popup-row b{color:#fff}.popup-actions{display:flex;gap:6px;margin-top:10px}.popup-actions button{background:#22334e;color:#fff;border:1px solid #405575;padding:6px 8px;border-radius:6px;cursor:pointer}
+.modalback{display:none;position:fixed;inset:0;background:#0009;z-index:2000;align-items:center;justify-content:center;padding:15px}.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(430px,100%);box-shadow:0 20px 70px #0008}.modal h2{font-size:17px;margin:0 0 14px}.formgrid{display:grid;gap:10px}.formgrid label{font-size:12px;color:var(--muted);display:grid;gap:5px}.modalfoot{display:flex;gap:8px;margin-top:15px}.modalfoot button{flex:1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#c3cfdf}.legend span{display:flex;align-items:center;gap:5px}
+@media(max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:48vh 52vh}.sidebar{grid-row:2;border-right:0;border-top:1px solid var(--line)}.brand{padding:10px 14px}.brand h1{font-size:17px}.brand p{display:none}.content{padding:10px 14px}.section{margin-bottom:12px}.stats{grid-template-columns:repeat(2,1fr)}.mapwrap{grid-row:1}.maptop{left:55px;top:8px}.mapchip{font-size:10px;padding:7px 9px}.leaflet-bottom{bottom:3px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><small>GIS • KARAGANDA</small><h1>KARAGANDA LAND</h1><p>Интерактивная карта земельных участков</p></div>
+  <div class="content">
+    <div class="section"><div class="label">Поиск адреса / участка</div><div class="search"><input id="search" placeholder="Улица, дом или кадастровый номер" autocomplete="off"></div><div id="geocodeResults" style="display:grid;gap:6px;margin-top:7px"></div><div id="searchHint" style="font-size:11px;color:var(--muted);margin-top:6px">Поиск адресов Караганды онлайн по OpenStreetMap</div></div>
+    <div class="section stats">
+      <div class="stat"><b id="total">0</b><span>Участков на карте</span></div>
+      <div class="stat"><b id="area">—</b><span>Общая площадь, га</span></div>
+    </div>
+    <div class="section"><div class="label">Категории участков</div><div class="filters" id="filters">
+      <label class="filter"><input type="checkbox" data-cat="residential" checked style="width:auto"><i class="dot" style="background:#36b879"></i>ИЖС / жилые</label>
+      <label class="filter"><input type="checkbox" data-cat="commercial" checked style="width:auto"><i class="dot" style="background:#e7a83e"></i>Коммерческие</label>
+      <label class="filter"><input type="checkbox" data-cat="industrial" checked style="width:auto"><i class="dot" style="background:#8b78e6"></i>Промышленные</label>
+      <label class="filter"><input type="checkbox" data-cat="agricultural" checked style="width:auto"><i class="dot" style="background:#4da8df"></i>Сельхозназначение</label>
+      <label class="filter"><input type="checkbox" data-cat="other" checked style="width:auto"><i class="dot" style="background:#9aa7b8"></i>Другие</label>
+    </div></div>
+    <div class="section"><div class="label">Управление данными</div><div class="actions">
+      <button class="btn primary" id="draw">＋ Добавить участок</button>
+      <button class="btn" id="export">Экспорт GeoJSON</button>
+      <button class="btn" id="import">Импорт GeoJSON</button>
+      <button class="btn" id="reset">Сбросить демо</button>
+      <input type="file" id="file" accept=".json,.geojson,application/geo+json,application/json" hidden>
+    </div></div>
+    <div class="section"><div class="label">Официальные геоданные</div><div class="actions">
+      <button class="btn full" id="officialCad">Открыть кадастровую карту ЕГКН ↗</button>
+      <button class="btn full" id="officialGeo">Геопортал Карагандинской области ↗</button>
+      <button class="btn full" id="landData">Реестр земельных участков (CSV) ↗</button>
+    </div></div>
+    <div class="section"><div class="label">Легенда</div><div class="legend"><span><i class="dot" style="background:#36b879"></i>Жилые</span><span><i class="dot" style="background:#e7a83e"></i>Коммерция</span><span><i class="dot" style="background:#8b78e6"></i>Промзона</span></div></div>
+    <div class="note"><b style="color:#e5ad42">Источники и точность:</b> улицы и адресный поиск загружаются онлайн из OpenStreetMap. Зарегистрированные участки и их атрибуты доступны в государственном наборе ЕГКН, но CSV не содержит геометрию границ. Цветные демо-полигоны — тестовые, не кадастровые. Для точной раскраски импортируйте официальный GeoJSON либо используйте публичную кадастровую карту.</div>
+  </div>
+</aside>
+<main class="mapwrap">
+  <div id="map"></div>
+  <div class="maptop"><div class="mapchip"><strong>КАРАГАНДА</strong> · Казахстан</div><div class="mapchip" id="mode">Режим: просмотр</div></div>
+</main>
+</div>
+<div class="modalback" id="modalback"><div class="modal">
+<h2 id="modalTitle">Информация об участке</h2>
+<div class="formgrid">
+<label>Кадастровый номер<input id="cad" placeholder="Например, 09:142:001:123"></label>
+<label>Адрес<input id="addr" placeholder="Улица, дом / район"></label>
+<label>Площадь, м²<input id="size" type="number" min="0" placeholder="600"></label>
+<label>Категория<select id="cat"><option value="residential">ИЖС / жилой</option><option value="commercial">Коммерческий</option><option value="industrial">Промышленный</option><option value="agricultural">Сельхозназначение</option><option value="other">Другой</option></select></label>
+<label>Статус<select id="status"><option>Не указан</option><option>Свободен</option><option>Занят</option><option>Продан</option><option>В аренде</option></select></label>
+<label>Примечание<input id="notes" placeholder="Дополнительная информация"></label>
+</div>
+<div class="modalfoot"><button class="btn" id="cancel">Отмена</button><button class="btn primary" id="save">Сохранить</button></div>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin=""></script>
+<script>
+const colors={residential:'#36b879',commercial:'#e7a83e',industrial:'#8b78e6',agricultural:'#4da8df',other:'#9aa7b8'};
+const names={residential:'ИЖС / жилой',commercial:'Коммерческий',industrial:'Промышленный',agricultural:'Сельхозназначение',other:'Другой'};
+if(!window.L){document.getElementById('map').innerHTML='<div style="padding:24px;color:#17243a;font:16px Arial">Не удалось загрузить библиотеку карты. Проверьте интернет и откройте файл в Safari или Chrome.</div>';throw new Error('Leaflet library failed to load');}
+// Leaflet map of Karaganda. CARTO is the primary basemap because OSM blocks some local-file requests without a Referer.
+L.TileLayer.prototype.options.referrerPolicy='strict-origin-when-cross-origin';
+const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView([49.806,73.085],12);
+const streets=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap contributors © CARTO',crossOrigin:true,referrerPolicy:'strict-origin-when-cross-origin'}).addTo(map);
+const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors',referrerPolicy:'strict-origin-when-cross-origin'});
+const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
+L.control.layers({'Улицы (CARTO)':streets,'OpenStreetMap':osm,'Спутник':satellite},null,{position:'topright'}).addTo(map);
+let baseFallbackTried=false;
+streets.on('tileerror',()=>{if(!baseFallbackTried){baseFallbackTried=true;setTimeout(()=>{if(!map.hasLayer(osm))osm.addTo(map);},700);}});
+setTimeout(()=>map.invalidateSize(true),250);
+window.addEventListener('resize',()=>setTimeout(()=>map.invalidateSize(true),150));
+window.addEventListener('orientationchange',()=>setTimeout(()=>map.invalidateSize(true),400));
+const group=new L.FeatureGroup().addTo(map);
+let parcels=[],editingId=null,drawControl;
+const demo=[
+ {id:'demo-1',cad:'ДЕМО-09-001',addr:'Тестовый участок — не кадастровые данные',size:600,cat:'residential',status:'Не указан',notes:'Демонстрационный полигон'},
+ {id:'demo-2',cad:'ДЕМО-09-002',addr:'Тестовый участок — не кадастровые данные',size:1200,cat:'commercial',status:'Не указан',notes:'Демонстрационный полигон'},
+ {id:'demo-3',cad:'ДЕМО-09-003',addr:'Тестовый участок — не кадастровые данные',size:2400,cat:'industrial',status:'Не указан',notes:'Демонстрационный полигон'}
+];
+function style(f){let p=f.properties||{};return {color:colors[p.cat]||colors.other,weight:2,opacity:.95,fillColor:colors[p.cat]||colors.other,fillOpacity:.38};}
+function popup(p){return `<div class="popup-title">${esc(p.cad||'Без кадастрового номера')}</div><div class="popup-row">Адрес: <b>${esc(p.addr||'Не указан')}</b></div><div class="popup-row">Площадь: <b>${p.size?Number(p.size).toLocaleString('ru-RU')+' м²':'Не указана'}</b></div><div class="popup-row">Категория: <b>${names[p.cat]||'Другой'}</b></div><div class="popup-row">Статус: <b>${esc(p.status||'Не указан')}</b></div><div class="popup-actions"><button onclick="editParcel('${p.id}')">Изменить</button><button onclick="deleteParcel('${p.id}')">Удалить</button></div>`;}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function visible(p){let box=document.querySelector(`[data-cat="${p.cat||'other'}"]`);return !box||box.checked;}
+function render(){
+ group.clearLayers();
+ parcels.forEach(p=>{if(!visible(p))return;let layer=L.geoJSON(p.feature,{style,onEachFeature:(f,l)=>l.bindPopup(popup(p))});layer.eachLayer(l=>{l._parcelId=p.id;group.addLayer(l);});});
+ document.getElementById('total').textContent=parcels.length;
+ let sum=parcels.reduce((a,p)=>a+(Number(p.size)||0),0);document.getElementById('area').textContent=sum?(sum/10000).toFixed(2):'—';
+}
+function persist(){localStorage.setItem('karagandaLandParcels',JSON.stringify(parcels));render();}
+function openModal(p){editingId=p?.id||null;document.getElementById('modalTitle').textContent=editingId?'Изменить участок':'Новый участок';['cad','addr','size','cat','status','notes'].forEach(k=>document.getElementById(k).value=p?.[({cad:'cad',addr:'addr',size:'size',cat:'cat',status:'status',notes:'notes'})[k]]??(k==='cat'?'residential':k==='status'?'Не указан':''));document.getElementById('modalback').style.display='flex';}
+function closeModal(){document.getElementById('modalback').style.display='none';}
+document.getElementById('cancel').onclick=closeModal;
+document.getElementById('save').onclick=()=>{let p={id:editingId||'parcel-'+Date.now(),cad:cad.value.trim(),addr:addr.value.trim(),size:Number(size.value)||0,cat:cat.value,status:status.value,notes:notes.value,feature:window.pendingFeature};if(editingId){let old=parcels.find(x=>x.id===editingId);p.feature=old.feature;}else if(!p.feature){alert('Сначала нарисуйте границы участка на карте.');return;}let i=parcels.findIndex(x=>x.id===p.id);if(i>=0)parcels[i]=p;else parcels.push(p);window.pendingFeature=null;closeModal();persist();};
+window.editParcel=id=>{let p=parcels.find(x=>x.id===id);if(p)openModal(p);};
+window.deleteParcel=id=>{if(confirm('Удалить этот участок?')){parcels=parcels.filter(x=>x.id!==id);persist();}};
+document.getElementById('draw').onclick=()=>{if(!L.Draw){alert('Инструмент рисования не загрузился. Проверьте интернет и обновите страницу.');return;}document.getElementById('mode').textContent='Режим: нарисуйте границы';new L.Draw.Polygon(map,{allowIntersection:false,showArea:true,shapeOptions:{color:'#e5ad42',fillOpacity:.3}}).enable();};
+map.on(L.Draw.Event.CREATED,e=>{window.pendingFeature=e.layer.toGeoJSON();openModal(null);});
+document.querySelectorAll('[data-cat]').forEach(x=>x.addEventListener('change',render));
+let geocodeTimer=null, geocodeController=null;
+const searchBox=document.getElementById('search'), resultsBox=document.getElementById('geocodeResults'), hint=document.getElementById('searchHint');
+function showAddressResults(items){resultsBox.innerHTML='';if(!items.length){hint.textContent='Адреса не найдены. Попробуйте улицу и номер дома.';return;}hint.textContent='Выберите адрес, чтобы перейти к нему на карте.';items.forEach(item=>{let b=document.createElement('button');b.className='btn';b.style.textAlign='left';b.style.fontSize='12px';b.textContent=item.display_name;b.onclick=()=>{let lat=Number(item.lat),lon=Number(item.lon);map.setView([lat,lon],18);L.marker([lat,lon]).addTo(map).bindPopup('<b>'+String(item.display_name).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</b>').openPopup();resultsBox.innerHTML='';hint.textContent='Карта перемещена к выбранному адресу.';};resultsBox.appendChild(b);});}
+async function geocodeAddress(q){if(geocodeController)geocodeController.abort();geocodeController=new AbortController();hint.textContent='Ищем адрес…';try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=kz&viewbox=72.75,49.96,73.40,49.62&bounded=1&q='+encodeURIComponent(q+', Караганда, Казахстан');const r=await fetch(url,{signal:geocodeController.signal,headers:{'Accept':'application/json'}});if(!r.ok)throw Error('Поиск временно недоступен');const data=await r.json();showAddressResults(data);}catch(err){if(err.name!=='AbortError')hint.textContent='Не удалось выполнить онлайн-поиск. Проверьте интернет или используйте официальную карту.';}}
+searchBox.addEventListener('input',e=>{let q=e.target.value.trim();if(geocodeTimer)clearTimeout(geocodeTimer);if(q.length<3){resultsBox.innerHTML='';hint.textContent='Введите минимум 3 символа для поиска адреса.';return;}let own=parcels.find(x=>(x.cad||'').toLowerCase().includes(q.toLowerCase())||(x.addr||'').toLowerCase().includes(q.toLowerCase()));if(own){let l=L.geoJSON(own.feature);map.fitBounds(l.getBounds(),{maxZoom:18});hint.textContent='Найден ваш участок: '+(own.cad||own.addr);return;}geocodeTimer=setTimeout(()=>geocodeAddress(q),550);});
+searchBox.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();let q=searchBox.value.trim();if(q.length>=3)geocodeAddress(q);}});
+document.getElementById('officialCad').onclick=()=>window.open('https://map.gov4c.kz/egkn/','_blank','noopener');
+document.getElementById('officialGeo').onclick=()=>window.open('https://geo.qarobl.kz/','_blank','noopener');
+document.getElementById('landData').onclick=()=>window.open('https://ashyq.data.gov.kz/dataset/magda-ds-0443eea7-15bf-4482-bdf0-70dd1df3f67f?lang=ru','_blank','noopener');
+document.getElementById('export').onclick=()=>{let fc={type:'FeatureCollection',features:parcels.map(p=>({...p.feature,properties:{...p.feature.properties,...p,id:undefined,feature:undefined}}))};let a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(fc,null,2)],{type:'application/geo+json'}));a.href=url;a.download='karaganda-land.geojson';a.click();URL.revokeObjectURL(url);};
+document.getElementById('import').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(data.type!=='FeatureCollection')throw Error('Ожидается GeoJSON FeatureCollection');let incoming=data.features.map((feature,i)=>{let x=feature.properties||{};return{id:String(x.id||'import-'+Date.now()+'-'+i),cad:x.cad||x.cadastral_number||x['Кадастровый номер']||'',addr:x.addr||x.address||x['Адрес']||'',size:Number(x.size||x.area||x['Площадь'])||0,cat:colors[x.cat]?x.cat:(['residential','commercial','industrial','agricultural','other'].includes(x.category)?x.category:'other'),status:x.status||'Не указан',notes:x.notes||'',feature:{type:'Feature',geometry:feature.geometry,properties:{}}};});parcels=parcels.filter(p=>!p.id.startsWith('demo-')).concat(incoming);persist();alert('Импортировано объектов: '+incoming.length);}catch(err){alert('Ошибка импорта: '+err.message);}e.target.value='';};
+document.getElementById('reset').onclick=()=>{if(confirm('Загрузить демонстрационные полигоны? Текущие данные останутся в экспорте, но будут заменены.')){parcels=makeDemo();persist();}};
+function makeDemo(){let base=[49.806,73.085];function poly(dx,dy,w,h){return {type:'Feature',geometry:{type:'Polygon',coordinates:[[[base[1]+dx,base[0]+dy],[base[1]+dx+w,base[0]+dy],[base[1]+dx+w,base[0]+dy+h],[base[1]+dx,base[0]+dy+h],[base[1]+dx,base[0]+dy]]]},properties:{}};}return demo.map((p,i)=>({...p,feature:poly(i*.008-0.01,i*.006-0.008,.004,.003)}));}
+try{let saved=JSON.parse(localStorage.getItem('karagandaLandParcels'));parcels=Array.isArray(saved)?saved:makeDemo();}catch(e){parcels=makeDemo();}render();
+</script>
+</body></html>
